@@ -1,4 +1,5 @@
-# zauberon
+# zauberon ('sŏw-bă-ŏn) 
+![Zauberon](zauberon.png)
 
 A Clojure program to simulate the Quantum Physical characteristics of 'zauberon's ascribed to photons in the book 
 'New Age Quantum Physics' by Al Schneider, ISBN-10: 1467938009.
@@ -9,9 +10,10 @@ prowess in the world of magic.
 
 ## Basic Model Concepts
  
-1. All zauberons have an integer counter that can never be negative.
+1. All zauberons have a counter that can never be negative.
 2. All zauberons travel in a helix at the same constant axial speed.  
-3. The change in position over time of zauberons is described by a radius, axial vector, and radial angle. 
+3. The change in position over time of zauberons is described by a radius, axial vector, radial angle, and direction 
+of rotation. 
 4. As zauberons move their integer counter decrements by one for each period of travel.
 5. zauberons 'collide' when they are at the same position within a 3D space at the same time.
 6. When collisions occur a collision function executes on each set of colliding zauberons, and returns the new state of 
