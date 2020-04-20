@@ -5,11 +5,13 @@
 (defn simulate
   [{:keys [iterations zauberon-count initialize-fn new-position-fn locate-collisions-fn collision-fn output-fn]}]
   (loop [iteration iterations
-         zauberons (initialize-fn zauberon-count)]
+         zauberons (initialize-fn zauberon-count)
+         collision-fn collision-fn]
     (if (zero? iteration)
       (println "Executed" iterations "Iterations")
-      (recur (dec iteration)
-             (-> zauberons new-position-fn locate-collisions-fn collision-fn (output-fn iteration))))))
+      (let [{:keys [zauberons collision-fn]}
+            (-> zauberons new-position-fn locate-collisions-fn collision-fn (output-fn iteration))]
+        (recur (dec iteration) zauberons collision-fn)))))
 
 (defn -main [& args]
   (try
@@ -23,5 +25,5 @@
     (catch Exception e
       (println "Exception:")
       (pprint e)
-      (System/exit 1Abp2)))
+      (System/exit 1)))
   (System/exit 0))

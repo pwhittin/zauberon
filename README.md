@@ -34,6 +34,3 @@ Public License, v. 2.0 are satisfied: GNU General Public License as published by
 the Free Software Foundation, either version 2 of the License, or (at your
 option) any later version, with the GNU Classpath Exception which is available
 at https://www.gnu.org/software/classpath/license.html.
-
-
-https://databasefaq.com/index.php/answer/265685/java-math-geometry-coordinates-helix-how-do-i-calculate-the-coordinates-of-the-points-of-an-helix
