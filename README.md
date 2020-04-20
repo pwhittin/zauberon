@@ -1,12 +1,12 @@
 # zauberon ('sŏw-bă-ŏn) 
 ![Zauberon](zauberon.png)
 
-A Clojure program to simulate the Quantum Physical characteristics of 'zauberon's ascribed to photons in the book 
-'New Age Quantum Physics' by Al Schneider, ISBN-10: 1467938009.
+A Clojure program to simulate the quantum physical characteristics of photons as described in the book 'New Age Quantum 
+Physics' by Al Schneider, ISBN-10: 1467938009.
 
-In the book, Al refers to the fundamental particle as a photon.  For this simulation I've chosen the name 'zauberon' 
-because I don't want there to be any confusion with the established concept of a photon, and to pay homage to Al's
-prowess in the world of magic.
+In the book, fundamental particles are called photons.  For this simulation I've chosen the name 'zauberon' because I 
+don't want there to be any confusion with the established concept of a photon, and to pay homage to Al's prowess in the 
+world of magic.
 
 ## Basic Model Concepts
  
@@ -34,3 +34,6 @@ Public License, v. 2.0 are satisfied: GNU General Public License as published by
 the Free Software Foundation, either version 2 of the License, or (at your
 option) any later version, with the GNU Classpath Exception which is available
 at https://www.gnu.org/software/classpath/license.html.
+
+
+https://databasefaq.com/index.php/answer/265685/java-math-geometry-coordinates-helix-how-do-i-calculate-the-coordinates-of-the-points-of-an-helix
