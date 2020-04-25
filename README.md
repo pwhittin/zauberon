@@ -1,7 +1,5 @@
 # zauberon ('sŏw-bă-ŏn) 
-![Zauberon](zauberon.png)
-
-A Clojure program to simulate the quantum physical characteristics of photons as described in the book 'New Age Quantum 
+![Zauberon](zauberon.png)A Clojure program to simulate the quantum physical characteristics of photons as described in the book 'New Age Quantum 
 Physics' by Al Schneider, ISBN-10: 1467938009.
 
 In the book, fundamental particles are called photons.  For this simulation I've chosen the name 'zauberon' because I 
