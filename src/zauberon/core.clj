@@ -17,11 +17,11 @@
 
 (def core-cli-options
   [["-i" "--iterations ITERATIONS" "Number of iterations"
-    :default 1
+    :default 0
     :parse-fn #(Integer/parseInt %)
     :validate [#(> % 0) "Must be a number greater than zero"]]
    ["-z" "--zauberons ZAUBERONS" "Number of zauberons"
-    :default 1
+    :default 0
     :parse-fn #(Integer/parseInt %)
     :validate [#(> % 0) "Must be a number greater than zero"]]
    ["-h" "--help"]])

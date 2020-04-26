@@ -19,7 +19,7 @@
 (defn sin [r]
   (Math/sin r))
 
-(defn pitch-yaw-roll->xform-matrix [pitch-yaw-roll]
+(defn internal-pitch-yaw-roll->xform-matrix [pitch-yaw-roll]
   (let [[cos-pitch cos-yaw cos-roll] (map cos pitch-yaw-roll)
         [sin-pitch sin-yaw sin-roll] (map sin pitch-yaw-roll)]
     [[(*' cos-pitch cos-yaw)
@@ -31,6 +31,7 @@
      [(-' sin-pitch)
       (*' sin-roll cos-pitch)
       (*' cos-roll cos-pitch)]]))
+(def pitch-yaw-roll->xform-matrix (memoize internal-pitch-yaw-roll->xform-matrix))
 
 (defn rotate-3d [pitch-yaw-roll xyz-0]
   (->> (map #(map *' %1 %2) (pitch-yaw-roll->xform-matrix pitch-yaw-roll) (repeat xyz-0))
@@ -67,33 +68,6 @@
       :xyz-helix (map +' xyz-helix hv)
       :xyz-zauberon (map +' xyz-helix xyz-1))))
 
-
-
-(defn mins-maxs-initialize [ctx]
-  (assoc ctx
-    :max-x (*' -1 (Double/MIN_VALUE))
-    :min-x (Double/MAX_VALUE)
-    :max-y (*' -1 (Double/MIN_VALUE))
-    :min-y (Double/MAX_VALUE)
-    :max-z (*' -1 (Double/MIN_VALUE))
-    :min-z (Double/MAX_VALUE)))
-
-(defn mins-maxs-update [ctx zauberons]
-  (loop [remaining-zauberons zauberons
-         new-ctx ctx]
-    (if (empty? remaining-zauberons)
-      new-ctx
-      (let [[x y z] (-> remaining-zauberons first :xyz-zauberon)
-            {:keys [max-x min-x max-y min-y max-z min-z]} new-ctx]
-        (recur (rest remaining-zauberons)
-               (assoc new-ctx
-                 :max-x (max x max-x)
-                 :min-x (min x min-x)
-                 :max-y (max y max-y)
-                 :min-y (min y min-y)
-                 :max-z (max z max-z)
-                 :min-z (min z min-z)))))))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; protocol implementation
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -113,10 +87,13 @@
   (.close (ctx :output-writer)))
 
 (defn initialize [cli-map]
-  (let [output-file (get-in cli-map [:options :output-file])
+  (let [iterations (get-in cli-map [:options :iterations])
+        output-file (get-in cli-map [:options :output-file])
         output-writer (io/writer output-file)]
     (.write output-writer "# x y z\n")
-    {:output-file output-file, :output-writer output-writer}))
+    {:output-file       output-file,
+     :output-writer     output-writer
+     :iteration-divisor (/ iterations 10)}))
 
 (defn initialize-zauberons [{:keys [ctx zauberon-count]}]
   {:ctx       ctx
@@ -130,7 +107,7 @@
   (assoc ctx-zauberons :zauberons (map new-zauberon-position zauberons)))
 
 (defn output [iteration {:keys [ctx zauberons] :as ctx-zauberons}]
-  (print ".")
+  (when (zero? (mod iteration (ctx :iteration-divisor))) (println iteration))
   (doseq [zauberon zauberons]
     (let [[x y z] (zauberon :xyz-zauberon)]
       (.write (ctx :output-writer) (str x " " y " " z "\n"))))
