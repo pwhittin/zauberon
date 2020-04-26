@@ -14,7 +14,7 @@
   (finalize [this ctx]
     "Finalizes simulator.")
   (initialize [this cli-map]
-    "Initializes simulator, and return a simulator execution context.")
+    "Initializes simulator, and returns a simulator execution context.")
   (initialize-zauberons-fn [this cli-map]
     "Returns a function that takes a map of simulator execution context 'ctx' and a zauberon count, and returns a map of
      simulator execution context and a sequence of zauberon-count initialized zauberons.

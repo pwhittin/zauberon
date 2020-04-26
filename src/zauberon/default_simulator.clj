@@ -1,44 +1,150 @@
 (ns zauberon.default-simulator
-  (:require [clojure.string :as cstr]
+  (:require [clojure.java.io :as io]
+            [clojure.string :as cstr]
             [zauberon.simulator-protocol :as simulator-protocol]))
 
+(def box 100000)
+(def angle-steps 2)
+(def helix-advance 10)
+(def radius 1000)
+
+(def pi*2 (*' 2 (Math/PI)))
+(def angle-steps-adjustment (* pi*2 (/ angle-steps 360)))
+(def xyz-helix [(/ box 2) (/ box 2) (/ box 2)])
+(def xyz-zauberon [0 0 0])
+
+(defn cos [r]
+  (Math/cos r))
+
+(defn sin [r]
+  (Math/sin r))
+
+(defn pitch-yaw-roll->xform-matrix [pitch-yaw-roll]
+  (let [[cos-pitch cos-yaw cos-roll] (map cos pitch-yaw-roll)
+        [sin-pitch sin-yaw sin-roll] (map sin pitch-yaw-roll)]
+    [[(*' cos-pitch cos-yaw)
+      (-' (*' sin-roll sin-pitch cos-yaw) (*' cos-roll sin-yaw))
+      (+' (*' sin-roll sin-yaw) (*' cos-roll sin-pitch cos-yaw))]
+     [(*' cos-pitch sin-yaw)
+      (+' (*' cos-roll cos-yaw) (*' sin-roll sin-pitch sin-yaw))
+      (-' (*' cos-roll sin-pitch sin-yaw) (*' sin-roll cos-yaw))]
+     [(-' sin-pitch)
+      (*' sin-roll cos-pitch)
+      (*' cos-roll cos-pitch)]]))
+
+(defn rotate-3d [pitch-yaw-roll xyz-0]
+  (->> (map #(map *' %1 %2) (pitch-yaw-roll->xform-matrix pitch-yaw-roll) (repeat xyz-0))
+       (map #(apply +' %))))
+
+(defn random-angle []
+  (*' pi*2 (/ (rand-int 360) 360)))
+
+(defn initialize-zauberon [helix-advance xyz-helix radius]
+  (let [pitch-yaw-roll [(random-angle) (random-angle) (random-angle)]
+        rotation (if (even? (rand-int 2)) :right :left)]
+    {:angle          (if (= rotation :right) 0 pi*2)
+     :rotation       rotation
+     :hv             (rotate-3d pitch-yaw-roll [helix-advance 0 0])
+     :pitch-yaw-roll pitch-yaw-roll
+     :radius         radius
+     :xyz-helix      xyz-helix
+     :xyz-zauberon   xyz-zauberon}))
+
+(defn adjust-angle-right [angle]
+  (let [possible-new-angle (+' angle angle-steps-adjustment)]
+    (if (>= possible-new-angle pi*2) 0 possible-new-angle)))
+
+(defn adjust-angle-left [angle]
+  (let [possible-new-angle (-' angle angle-steps-adjustment)]
+    (if (< possible-new-angle 0) pi*2 possible-new-angle)))
+
+(defn new-zauberon-position [{:keys [angle rotation hv pitch-yaw-roll radius xyz-helix] :as zauberon}]
+  (let [new-angle ((if (= rotation :right) adjust-angle-right adjust-angle-left) angle)
+        xyz-0 [helix-advance (*' radius (cos new-angle)) (*' radius (sin new-angle))]
+        xyz-1 (rotate-3d pitch-yaw-roll xyz-0)]
+    (assoc zauberon
+      :angle new-angle
+      :xyz-helix (map +' xyz-helix hv)
+      :xyz-zauberon (map +' xyz-helix xyz-1))))
+
+
+
+(defn mins-maxs-initialize [ctx]
+  (assoc ctx
+    :max-x (*' -1 (Double/MIN_VALUE))
+    :min-x (Double/MAX_VALUE)
+    :max-y (*' -1 (Double/MIN_VALUE))
+    :min-y (Double/MAX_VALUE)
+    :max-z (*' -1 (Double/MIN_VALUE))
+    :min-z (Double/MAX_VALUE)))
+
+(defn mins-maxs-update [ctx zauberons]
+  (loop [remaining-zauberons zauberons
+         new-ctx ctx]
+    (if (empty? remaining-zauberons)
+      new-ctx
+      (let [[x y z] (-> remaining-zauberons first :xyz-zauberon)
+            {:keys [max-x min-x max-y min-y max-z min-z]} new-ctx]
+        (recur (rest remaining-zauberons)
+               (assoc new-ctx
+                 :max-x (max x max-x)
+                 :min-x (min x min-x)
+                 :max-y (max y max-y)
+                 :min-y (min y min-y)
+                 :max-z (max z max-z)
+                 :min-z (min z min-z)))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; protocol implementation
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defn add-cli-options [cli-options]
-  (conj cli-options [nil "--output-file OUTPUTFILE" "File spec of output file"
-                     :default ""
+  (conj cli-options ["-o" "--output-file OUTPUTFILE" "File spec of output file"
+                     :default "zauberons.dat"
                      :validate [#(not (cstr/blank? %)) "Must be non blank"]]))
 
-(defn collision [{:keys [ctx zauberon-collisions]}]
-  )
+(defn collision [{:keys [zauberon-collisions] :as ctx-zauberons}]
+  (assoc ctx-zauberons :zauberons (map first zauberon-collisions)))
 
-(defn description [{:keys [output-file]}]
-  (str "Default Simulator With Output To '" (.getPath output-file) "'"))
+(defn description [{:keys [output-file] :as ctx}]
+  (str "Default Simulator: Output = '" output-file "'"))
 
-(defn finalize [{:keys [output-file]}]
-  (try
-    (.close output-file)
-    (catch Exception e)))
+(defn finalize [ctx]
+  (.close (ctx :output-writer)))
 
 (defn initialize [cli-map]
-  )
+  (let [output-file (get-in cli-map [:options :output-file])
+        output-writer (io/writer output-file)]
+    (.write output-writer "# x y z\n")
+    {:output-file output-file, :output-writer output-writer}))
 
 (defn initialize-zauberons [{:keys [ctx zauberon-count]}]
-  )
+  {:ctx       ctx
+   :zauberons (for [_ (range zauberon-count)] (initialize-zauberon helix-advance xyz-helix radius))})
 
 (defn locate-collisions [{:keys [ctx zauberons]}]
-  )
+  {:ctx                 ctx
+   :zauberon-collisions (map hash-set zauberons)})
 
-(defn new-position [{:keys [ctx zauberons]}]
-  )
+(defn new-position [{:keys [ctx zauberons] :as ctx-zauberons}]
+  (assoc ctx-zauberons :zauberons (map new-zauberon-position zauberons)))
 
-(defn output [iteration {:keys [ctx zauberons]}]
-  )
+(defn output [iteration {:keys [ctx zauberons] :as ctx-zauberons}]
+  (print ".")
+  (doseq [zauberon zauberons]
+    (let [[x y z] (zauberon :xyz-zauberon)]
+      (.write (ctx :output-writer) (str x " " y " " z "\n"))))
+  ctx-zauberons)
 
 (defn validate-cli-map [cli-map]
-  (letfn [(add-error [cli-map output-dir error-str]
+  (letfn [(get-canonical-path [output-file]
+            (if (cstr/blank? output-file) "" (.getCanonicalPath (java.io.File. output-file))))
+          (add-error [cli-map output-dir error-str]
             (update cli-map :errors conj (str "The specified output directory '" output-dir "' " error-str)))]
-    (let [output-dir (-> (get-in cli-map [:options :output-file]) (.getParentFile) (java.io.File.))]
+    (let [output-spec (get-canonical-path (get-in cli-map [:options :output-file]))
+          output-dir (-> output-spec (java.io.File.) (.getParentFile))]
       (cond
-        (not (.exists output-dir)) (add-error cli-map output-dir "does not exist")
+        (or (nil? output-dir) (not (.exists output-dir))) (add-error cli-map output-dir "does not exist")
         (not (.isDirectory output-dir)) (add-error cli-map output-dir "is not a directory")
         :else cli-map))))
 
