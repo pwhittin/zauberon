@@ -77,34 +77,23 @@
   (pprint e)
   (println))
 
-(defn -main [& args]
+(defn main [args exit-fn]
   (try
     (let [zs (sim/create)
           cli-options (->> core-cli-options (sp/add-cli-options zs))
           cli-map (args->cli-map args cli-options zs)]
       (if (valid-cli-map? cli-map)
         (if (help? cli-map)
-          (do (println) (print-cli-options cli-map) (println) (System/exit 0))
-          (do (run-simulation zs cli-map ((juxt :iterations :zauberons) (cli-map :options))) (System/exit 0)))
-        (do (println) (print-cli-map-errors cli-map) (println) (System/exit 1))))
-    (catch Exception e (print-exception e) (System/exit 1))))
+          (do (println) (print-cli-options cli-map) (println) (exit-fn 0))
+          (do (run-simulation zs cli-map ((juxt :iterations :zauberons) (cli-map :options))) (exit-fn 0)))
+        (do (println) (print-cli-map-errors cli-map) (println) (exit-fn 1))))
+    (catch Exception e (print-exception e) (exit-fn 1))))
+
+(defn -main [& args]
+  (main args #(System/exit %)))
 
 (comment
 
-  (-main "-i" "10" "-z" "5")
-
-  (require 'zauberon.core :reload-all)
-
-  (let [args ["-h"]
-        zs (sim/create)
-        cli-options (->> core-cli-options (sp/add-cli-options zs))
-        cli-map (args->cli-map args cli-options zs)]
-    (if (valid-cli-map? cli-map)
-      (do
-        (run-simulation zs cli-map ((juxt :iterations :zauberons) (cli-map :options))))
-      (do (print-cli-map-errors cli-map)))
-    )
-
-  (-main)
+  (main ["-i" "10" "-z" "5"] identity)
 
   )
