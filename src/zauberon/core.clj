@@ -94,6 +94,4 @@
 
 (comment
 
-  (main ["-i" "10" "-z" "5"] identity)
-
-  )
+  (main ["-i" "100" "-z" "1000"] identity))

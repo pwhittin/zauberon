@@ -19,7 +19,7 @@
 (defn sin [r]
   (Math/sin r))
 
-(defn internal-pitch-yaw-roll->xform-matrix [pitch-yaw-roll]
+(defn pitch-yaw-roll->xform-matrix [pitch-yaw-roll]
   (let [[cos-pitch cos-yaw cos-roll] (map cos pitch-yaw-roll)
         [sin-pitch sin-yaw sin-roll] (map sin pitch-yaw-roll)]
     [[(*' cos-pitch cos-yaw)
@@ -31,10 +31,9 @@
      [(-' sin-pitch)
       (*' sin-roll cos-pitch)
       (*' cos-roll cos-pitch)]]))
-(def pitch-yaw-roll->xform-matrix (memoize internal-pitch-yaw-roll->xform-matrix))
 
-(defn rotate-3d [pitch-yaw-roll xyz-0]
-  (->> (map #(map *' %1 %2) (pitch-yaw-roll->xform-matrix pitch-yaw-roll) (repeat xyz-0))
+(defn rotate-3d [xform-matrix xyz-0]
+  (->> (map #(map *' %1 %2) xform-matrix (repeat xyz-0))
        (map #(apply +' %))))
 
 (defn random-angle []
@@ -42,12 +41,14 @@
 
 (defn initialize-zauberon [helix-advance xyz-helix radius]
   (let [pitch-yaw-roll [(random-angle) (random-angle) (random-angle)]
+        xform-matrix (pitch-yaw-roll->xform-matrix pitch-yaw-roll)
         rotation (if (even? (rand-int 2)) :right :left)]
     {:angle          (if (= rotation :right) 0 pi*2)
      :rotation       rotation
-     :hv             (rotate-3d pitch-yaw-roll [helix-advance 0 0])
+     :hv             (rotate-3d xform-matrix [helix-advance 0 0])
      :pitch-yaw-roll pitch-yaw-roll
      :radius         radius
+     :xform-matrix   xform-matrix
      :xyz-helix      xyz-helix
      :xyz-zauberon   xyz-zauberon}))
 
@@ -59,14 +60,14 @@
   (let [possible-new-angle (-' angle angle-steps-adjustment)]
     (if (< possible-new-angle 0) pi*2 possible-new-angle)))
 
-(defn new-zauberon-position [{:keys [angle rotation hv pitch-yaw-roll radius xyz-helix] :as zauberon}]
+(defn new-zauberon-position [{:keys [angle rotation hv radius xform-matrix xyz-helix] :as zauberon}]
   (let [new-angle ((if (= rotation :right) adjust-angle-right adjust-angle-left) angle)
         xyz-0 [helix-advance (*' radius (cos new-angle)) (*' radius (sin new-angle))]
-        xyz-1 (rotate-3d pitch-yaw-roll xyz-0)]
+        xyz-1 (rotate-3d xform-matrix xyz-0)]
     (assoc zauberon
-      :angle new-angle
-      :xyz-helix (map +' xyz-helix hv)
-      :xyz-zauberon (map +' xyz-helix xyz-1))))
+           :angle new-angle
+           :xyz-helix (map +' xyz-helix hv)
+           :xyz-zauberon (map +' xyz-helix xyz-1))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; protocol implementation
@@ -80,7 +81,7 @@
 (defn collision [{:keys [zauberon-collisions] :as ctx-zauberons}]
   (assoc ctx-zauberons :zauberons (map first zauberon-collisions)))
 
-(defn description [{:keys [output-file] :as ctx}]
+(defn description [{:keys [output-file]}]
   (str "Default Simulator: Output = '" output-file "'"))
 
 (defn finalize [ctx]
@@ -103,7 +104,7 @@
   {:ctx                 ctx
    :zauberon-collisions (map hash-set zauberons)})
 
-(defn new-position [{:keys [ctx zauberons] :as ctx-zauberons}]
+(defn new-position [{:keys [zauberons] :as ctx-zauberons}]
   (assoc ctx-zauberons :zauberons (map new-zauberon-position zauberons)))
 
 (defn output [iteration {:keys [ctx zauberons] :as ctx-zauberons}]

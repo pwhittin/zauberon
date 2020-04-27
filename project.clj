@@ -6,6 +6,8 @@
             :url  "https://www.eclipse.org/legal/epl-2.0/"}
   :dependencies [[org.clojure/clojure "1.10.1"]
                  [org.clojure/tools.cli "1.0.194"]]
+  :plugins [[lein-ancient "0.6.15"]
+            [lein-cljfmt "0.6.7"]]
   :repl-options {:init-ns zauberon.core}
   :main zauberon.core
   :target-path "target/%s"
