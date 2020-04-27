@@ -3,12 +3,27 @@
             [clojure.string :as cstr]
             [zauberon.simulator-protocol :as simulator-protocol]))
 
+(def pi*2 (*' 2 (Math/PI)))
+
 (def box 100000)
 (def angle-steps 2)
 (def helix-advance 10)
 (def radius 1000)
+(def space (/ box 2))
 
-(def pi*2 (*' 2 (Math/PI)))
+(def center-x (/ box 2))
+(def center-y (/ box 2))
+(def center-z (/ box 2))
+
+(def back-boundry (+' center-x (/ space 2)))
+(def front-boundry (-' center-x (/ space 2)))
+(def right-boundry (+' center-y (/ space 2)))
+(def left-boundry (-' center-y (/ space 2)))
+(def up-boundry (-' center-z (/ space 2)))
+(def down-boundry (+' center-z (/ space 2)))
+(def negitive-space (*' -1 space))
+(def positive-space space)
+
 (def angle-steps-adjustment (* pi*2 (/ angle-steps 360)))
 (def xyz-helix [(/ box 2) (/ box 2) (/ box 2)])
 (def xyz-zauberon [0 0 0])
@@ -60,14 +75,33 @@
   (let [possible-new-angle (-' angle angle-steps-adjustment)]
     (if (< possible-new-angle 0) pi*2 possible-new-angle)))
 
+(defn space-adjust [x-y-or-z-zauberon positive-boundry negative-boundry]
+  (cond
+    (< x-y-or-z-zauberon positive-boundry) positive-space
+    (> x-y-or-z-zauberon negative-boundry) negitive-space
+    :else 0))
+
+(defn xyz-space-adjustments [xyz-zauberon]
+  (map space-adjust
+       xyz-zauberon
+       [front-boundry left-boundry up-boundry]
+       [back-boundry right-boundry down-boundry]))
+
+(defn xyz-adjust [xyz-zauberon xyz-helix]
+  (let [space-adjustments (xyz-space-adjustments xyz-zauberon)]
+    [(map +' space-adjustments xyz-zauberon) (map +' space-adjustments xyz-helix)]))
+
 (defn new-zauberon-position [{:keys [angle rotation hv radius xform-matrix xyz-helix] :as zauberon}]
   (let [new-angle ((if (= rotation :right) adjust-angle-right adjust-angle-left) angle)
         xyz-0 [helix-advance (*' radius (cos new-angle)) (*' radius (sin new-angle))]
-        xyz-1 (rotate-3d xform-matrix xyz-0)]
+        xyz-1 (rotate-3d xform-matrix xyz-0)
+        new-xyz-zauberon (map +' xyz-helix xyz-1)
+        new-xyz-helix (map +' xyz-helix hv)
+        [adjusted-xyz-zauberon adjusted-xyz-helix] (xyz-adjust new-xyz-zauberon new-xyz-helix)]
     (assoc zauberon
            :angle new-angle
-           :xyz-helix (map +' xyz-helix hv)
-           :xyz-zauberon (map +' xyz-helix xyz-1))))
+           :xyz-helix adjusted-xyz-helix
+           :xyz-zauberon adjusted-xyz-zauberon)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; protocol implementation
@@ -78,8 +112,10 @@
                      :default "zauberons.dat"
                      :validate [#(not (cstr/blank? %)) "Must be non blank"]]))
 
-(defn collision [{:keys [zauberon-collisions] :as ctx-zauberons}]
-  (assoc ctx-zauberons :zauberons (map first zauberon-collisions)))
+(defn collision [{:keys [ctx zauberon-collisions]}]
+  ;; TODO: Implement a real collision resolution function
+  {:ctx       ctx
+   :zauberons zauberon-collisions})
 
 (defn description [{:keys [output-file]}]
   (str "Default Simulator: Output = '" output-file "'"))
@@ -98,11 +134,12 @@
 
 (defn initialize-zauberons [{:keys [ctx zauberon-count]}]
   {:ctx       ctx
-   :zauberons (for [_ (range zauberon-count)] (initialize-zauberon helix-advance xyz-helix radius))})
+   :zauberons (map (fn [_] (initialize-zauberon helix-advance xyz-helix radius)) (range zauberon-count))})
 
 (defn locate-collisions [{:keys [ctx zauberons]}]
+  ;; TODO: Implement a real collision locate function
   {:ctx                 ctx
-   :zauberon-collisions (map hash-set zauberons)})
+   :zauberon-collisions zauberons})
 
 (defn new-position [{:keys [zauberons] :as ctx-zauberons}]
   (assoc ctx-zauberons :zauberons (map new-zauberon-position zauberons)))
@@ -116,11 +153,11 @@
 
 (defn validate-cli-map [cli-map]
   (letfn [(get-canonical-path [output-file]
-            (if (cstr/blank? output-file) "" (.getCanonicalPath (java.io.File. output-file))))
+            (if (cstr/blank? output-file) "" (.getCanonicalPath (io/file output-file))))
           (add-error [cli-map output-dir error-str]
             (update cli-map :errors conj (str "The specified output directory '" output-dir "' " error-str)))]
     (let [output-spec (get-canonical-path (get-in cli-map [:options :output-file]))
-          output-dir (-> output-spec (java.io.File.) (.getParentFile))]
+          output-dir (-> output-spec (io/file) (.getParentFile))]
       (cond
         (or (nil? output-dir) (not (.exists output-dir))) (add-error cli-map output-dir "does not exist")
         (not (.isDirectory output-dir)) (add-error cli-map output-dir "is not a directory")
