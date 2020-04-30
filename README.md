@@ -15,6 +15,25 @@ of rotation.
 the zauberon set, and a new collision function.
 7. All zauberons have and initial state (i.e., Position, radius, axial vector, and radial angle).
 
+## Plot Of Sample Data
+Executing the following command:
+```bash
+./zauberon.sh -i 1000 -z 100
+```
+results in a file named **zauberons.dat**.  When plotted with **gnuplot** using the following commands:
+```bash
+gnuplot> set yrange [25000:75000]
+gnuplot> set ticslevel 0 
+gnuplot> set xrange [25000:75000]
+gnuplot> splot "zauberons.dat" u 1:2:3 with dots
+```
+the resulting plot looks like this:
+
+![Plot Of zauberons.dat](zauberons.png)
+
+Note that the plot will change each time the **zauberon.sh** command is executed because it is generating random data
+to define the path characteristics of the various zauberons it creates.
+
 ## License
 
 Copyright © 2020 by Paul H. Whittington.  All rights reserved.
