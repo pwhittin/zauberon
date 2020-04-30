@@ -13,7 +13,11 @@
     (if (zero? iteration)
       iterations
       (recur (dec iteration)
-             (->> ctx-zauberons-map (new-position-fn) (locate-collisions-fn) (collision-fn) (output-fn iteration))))))
+             (->> ctx-zauberons-map
+                  (new-position-fn)
+                  (locate-collisions-fn)
+                  (collision-fn)
+                  (output-fn (inc (- iterations iteration))))))))
 
 (def core-cli-options
   [["-i" "--iterations ITERATIONS" "Number of iterations"

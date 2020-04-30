@@ -6,9 +6,9 @@
 (def pi*2 (*' 2 (Math/PI)))
 
 (def box 100000)
-(def angle-steps 2)
-(def helix-advance 10)
-(def radius 1000)
+(def angle-steps-config [1000 1 15])
+(def helix-advance-config [1000 1 50])
+(def radius-config [1000 500 5000])
 (def space (/ box 2))
 
 (def center-x (/ box 2))
@@ -24,9 +24,11 @@
 (def negitive-space (*' -1 space))
 (def positive-space space)
 
-(def angle-steps-adjustment (* pi*2 (/ angle-steps 360)))
 (def xyz-helix [(/ box 2) (/ box 2) (/ box 2)])
 (def xyz-zauberon [0 0 0])
+
+(defn d2r [degrees]
+  (*' pi*2 (/ degrees 360)))
 
 (defn cos [r]
   (Math/cos r))
@@ -54,26 +56,33 @@
 (defn random-angle []
   (*' pi*2 (/ (rand-int 360) 360)))
 
-(defn initialize-zauberon [helix-advance xyz-helix radius]
+(defn random-in-range [[divisions min max]]
+  (let [r (inc (rand-int divisions))
+        r-over-d (/ r divisions)
+        delta (Math/abs (- max min))]
+    (*' delta r-over-d)))
+
+(defn initialize-zauberon [xyz-helix]
   (let [pitch-yaw-roll [(random-angle) (random-angle) (random-angle)]
         xform-matrix (pitch-yaw-roll->xform-matrix pitch-yaw-roll)
-        rotation (if (even? (rand-int 2)) :right :left)]
-    {:angle          (if (= rotation :right) 0 pi*2)
-     :rotation       rotation
-     :hv             (rotate-3d xform-matrix [helix-advance 0 0])
-     :pitch-yaw-roll pitch-yaw-roll
-     :radius         radius
-     :xform-matrix   xform-matrix
-     :xyz-helix      xyz-helix
-     :xyz-zauberon   xyz-zauberon}))
+        rotation (if (even? (rand-int 2)) :right :left)
+        helix-advance (random-in-range helix-advance-config)]
+    {:angle                  (random-angle)
+     :angle-steps-adjustment (d2r (random-in-range angle-steps-config))
+     :rotation               rotation
+     :helix-advance          helix-advance
+     :hv                     (rotate-3d xform-matrix [helix-advance 0 0])
+     :pitch-yaw-roll         pitch-yaw-roll
+     :radius                 (random-in-range radius-config)
+     :xform-matrix           xform-matrix
+     :xyz-helix              xyz-helix
+     :xyz-zauberon           xyz-zauberon}))
 
-(defn adjust-angle-right [angle]
-  (let [possible-new-angle (+' angle angle-steps-adjustment)]
-    (if (>= possible-new-angle pi*2) 0 possible-new-angle)))
+(defn adjust-angle-right [angle angle-steps-adjustment]
+  (+' angle angle-steps-adjustment))
 
-(defn adjust-angle-left [angle]
-  (let [possible-new-angle (-' angle angle-steps-adjustment)]
-    (if (< possible-new-angle 0) pi*2 possible-new-angle)))
+(defn adjust-angle-left [angle angle-steps-adjustment]
+  (-' angle angle-steps-adjustment))
 
 (defn space-adjust [x-y-or-z-zauberon positive-boundry negative-boundry]
   (cond
@@ -91,17 +100,18 @@
   (let [space-adjustments (xyz-space-adjustments xyz-zauberon)]
     [(map +' space-adjustments xyz-zauberon) (map +' space-adjustments xyz-helix)]))
 
-(defn new-zauberon-position [{:keys [angle rotation hv radius xform-matrix xyz-helix] :as zauberon}]
-  (let [new-angle ((if (= rotation :right) adjust-angle-right adjust-angle-left) angle)
+(defn new-zauberon-position
+  [{:keys [angle angle-steps-adjustment helix-advance hv rotation radius xform-matrix xyz-helix] :as zauberon}]
+  (let [new-angle ((if (= rotation :right) adjust-angle-right adjust-angle-left) angle angle-steps-adjustment)
         xyz-0 [helix-advance (*' radius (cos new-angle)) (*' radius (sin new-angle))]
         xyz-1 (rotate-3d xform-matrix xyz-0)
         new-xyz-zauberon (map +' xyz-helix xyz-1)
         new-xyz-helix (map +' xyz-helix hv)
         [adjusted-xyz-zauberon adjusted-xyz-helix] (xyz-adjust new-xyz-zauberon new-xyz-helix)]
     (assoc zauberon
-           :angle new-angle
-           :xyz-helix adjusted-xyz-helix
-           :xyz-zauberon adjusted-xyz-zauberon)))
+      :angle new-angle
+      :xyz-helix adjusted-xyz-helix
+      :xyz-zauberon adjusted-xyz-zauberon)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; protocol implementation
@@ -134,7 +144,7 @@
 
 (defn initialize-zauberons [{:keys [ctx zauberon-count]}]
   {:ctx       ctx
-   :zauberons (map (fn [_] (initialize-zauberon helix-advance xyz-helix radius)) (range zauberon-count))})
+   :zauberons (map (fn [_] (initialize-zauberon xyz-helix)) (range zauberon-count))})
 
 (defn locate-collisions [{:keys [ctx zauberons]}]
   ;; TODO: Implement a real collision locate function
@@ -146,6 +156,7 @@
 
 (defn output [iteration {:keys [ctx zauberons] :as ctx-zauberons}]
   (when (zero? (mod iteration (ctx :iteration-divisor))) (println iteration))
+  (.write (ctx :output-writer) (str "# Iteration: " iteration "\n"))
   (doseq [zauberon zauberons]
     (let [[x y z] (zauberon :xyz-zauberon)]
       (.write (ctx :output-writer) (str x " " y " " z "\n"))))

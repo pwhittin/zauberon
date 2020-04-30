@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 JAR_FILE=$(which "$0" 2>/dev/null)
 [ $? -gt 0 -a -f "$0" ] && JAR_FILE="./$0"
 JAVA_EXE=java
