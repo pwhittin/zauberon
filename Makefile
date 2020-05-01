@@ -16,6 +16,12 @@ build:
 	@echo
 
 ########################################################################################################################
+## Check dependencies
+check:
+	@scripts/make-check.sh
+	@echo
+
+########################################################################################################################
 ## Formats all files
 format:
 	@scripts/make-format.sh
@@ -42,6 +48,7 @@ help:
 	@echo "Usage:"
 	@echo "    'make'                generates this help information"
 	@echo "    'make build'          builds zauberon.sh, the application"
+	@echo "    'make check'          checks for dependency updates"
 	@echo "    'make format'         formats all files"
 	@echo "    'make git'            prepare for git commit by doing 'make format & git status'"
 	@echo "    'make help'           generates this help information"
