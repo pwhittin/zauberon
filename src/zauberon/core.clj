@@ -98,7 +98,7 @@
 
 (comment
 
-  (time (main ["-i" "1000" "-z" "1000"] identity))
+  (time (main ["-i" "1000" "-z" "100"] identity))
 
   ; comment
   )
