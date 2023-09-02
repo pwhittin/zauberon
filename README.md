@@ -3,7 +3,7 @@
 described in the book 'New Age Quantum Physics' by Al Schneider, ISBN-10: 1467938009.  
 
 In the book, fundamental particles are called photons.  For this simulation I've chosen the name 'Zauberon' to eliminate 
-confusion with the established concept of a photon, and to pay homage to Al's prowess in the world of magicians.
+confusion with the well established concept of a photon, and to pay homage to Al's prowess in the world of magicians.
 
 ## Model Concepts
 This model of the universe postulates that it is composed **ONLY** of Zauberons that move within space in a single 
